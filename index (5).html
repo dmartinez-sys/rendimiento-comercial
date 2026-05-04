@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rendimiento Comercial - Dpto. Admisiones</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f7fa;color:#1a202c;line-height:1.5}
+  header{background:linear-gradient(135deg,#1e293b,#334155);color:#fff;padding:24px 32px;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+  header h1{font-size:24px;font-weight:700}
+  header .meta{font-size:13px;opacity:.8;margin-top:4px}
+  .tabs{background:#fff;display:flex;flex-wrap:wrap;border-bottom:1px solid #e2e8f0;padding:0 16px;position:sticky;top:0;z-index:50}
+  .tab-btn{background:none;border:0;padding:14px 18px;font-size:14px;cursor:pointer;color:#64748b;border-bottom:3px solid transparent;font-weight:500;transition:.15s}
+  .tab-btn:hover{color:#1e293b;background:#f1f5f9}
+  .tab-btn.active{color:#0f766e;border-bottom-color:#0f766e;font-weight:600}
+  .container{padding:24px 32px;max-width:1500px;margin:0 auto}
+  .month-panel{display:none}
+  .month-panel.active{display:block}
+  .month-panel h2{font-size:22px;margin-bottom:16px;color:#0f766e}
+  .subtabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px;background:#e2e8f0;padding:6px;border-radius:10px;width:fit-content}
+  .subtab-btn{background:none;border:0;padding:8px 16px;cursor:pointer;border-radius:7px;font-size:13px;font-weight:500;color:#475569}
+  .subtab-btn:hover{background:#cbd5e1}
+  .subtab-btn.active{background:#fff;color:#0f766e;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  .week-block{display:none}
+  .week-block.active{display:block}
+  .week-block h3{font-size:18px;margin-bottom:16px;color:#1e293b}
+  .week-block .rango{font-weight:400;color:#64748b;font-size:13px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:18px}
+  .card{padding:18px 20px;border-radius:12px;color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.08)}
+  .card.a{background:linear-gradient(135deg,#3b82f6,#1d4ed8)}
+  .card.b{background:linear-gradient(135deg,#ec4899,#be185d)}
+  .card.neutral{background:linear-gradient(135deg,#0f766e,#0d5d57)}
+  .card .who{font-size:12px;text-transform:uppercase;letter-spacing:1px;opacity:.85}
+  .card .big{font-size:28px;font-weight:700;margin:6px 0}
+  .card .sub{font-size:12px;opacity:.85}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:900px){.grid-2{grid-template-columns:1fr}}
+  .panel{background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  .panel h4{font-size:14px;color:#475569;margin-bottom:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+  .kpi-table{font-size:13px}
+  .kpi-row{display:grid;grid-template-columns:1.6fr 1fr 1fr;padding:7px 4px;border-bottom:1px solid #f1f5f9}
+  .kpi-row.head{font-weight:700;color:#0f766e;border-bottom:2px solid #0f766e;font-size:12px;text-transform:uppercase}
+  .kpi-label{color:#475569}
+  .kpi-a{color:#1d4ed8;font-weight:600;text-align:right;padding-right:10px}
+  .kpi-b{color:#be185d;font-weight:600;text-align:right;padding-right:10px}
+  .alerts{list-style:none;padding-left:0}
+  .alerts li{padding:10px 12px;margin-bottom:6px;border-radius:8px;font-size:13px}
+  .alert.red{background:#fef2f2;color:#991b1b;border-left:4px solid #dc2626}
+  .alert.amber{background:#fffbeb;color:#92400e;border-left:4px solid #f59e0b}
+  .alert.green{background:#f0fdf4;color:#166534;border-left:4px solid #16a34a}
+  .conclusions{padding-left:18px;font-size:13px;line-height:1.7;color:#334155}
+  .conclusions li{margin-bottom:10px}
+  .conclusions b{color:#0f766e}
+  .src-table{width:100%;margin-top:14px;border-collapse:collapse;font-size:13px}
+  .src-table th{text-align:left;padding:8px;background:#f1f5f9;color:#475569;font-weight:600;font-size:12px}
+  .src-table td{padding:8px;border-bottom:1px solid #f1f5f9}
+  .empty-month{background:#fff;border-radius:12px;padding:40px;text-align:center;color:#64748b}
+  .empty-month h3{color:#0f766e;margin-bottom:10px;font-size:20px}
+  .empty-month .placeholder{margin-top:20px;background:#f8fafc;padding:16px;border-radius:10px;display:inline-block;text-align:left;font-size:13px}
+  .empty-month ul{margin-top:8px;padding-left:20px}
+  footer{text-align:center;padding:24px;color:#94a3b8;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>📈 Rendimiento Comercial · Dpto. Admisiones</h1>
+  <div class="meta">Antonio vs Beatriz · Año 2026 · Datos extraídos del CRM</div>
+</header>
+<nav class="tabs"><button class="tab-btn " data-target="mes-1">Enero</button><button class="tab-btn " data-target="mes-2">Febrero</button><button class="tab-btn " data-target="mes-3">Marzo</button><button class="tab-btn active" data-target="mes-4">Abril</button><button class="tab-btn " data-target="mes-5">Mayo</button><button class="tab-btn " data-target="mes-6">Junio</button><button class="tab-btn " data-target="mes-7">Julio</button><button class="tab-btn " data-target="mes-8">Agosto</button><button class="tab-btn " data-target="mes-9">Septiembre</button><button class="tab-btn " data-target="mes-10">Octubre</button><button class="tab-btn " data-target="mes-11">Noviembre</button><button class="tab-btn " data-target="mes-12">Diciembre</button></nav>
+<main class="container"><div class="month-panel" id="mes-1">
+  <div class="empty-month">
+    <h3>Enero 2026</h3>
+    <p>Aún no hay datos cargados para Enero. Cuando me pidas "dame la semana X de Enero", actualizaré este bloque con los datos reales del CRM.</p>
+    <div class="placeholder">
+      <div>📊 Estructura prevista:</div>
+      <ul>
+        <li>4-5 subpestañas semanales (W1, W2, ...)</li>
+        <li>Resumen mensual con totales y evolución</li>
+        <li>Comparativa Antonio vs Beatriz</li>
+        <li>Ranking de fuentes y conclusiones</li>
+      </ul>
+    </div>
+  </div>
+</div><div class="month-panel" id="mes-2">
+  <div class="empty-month">
+    <h3>Febrero 2026</h3>
+    <p>Aún no hay datos cargados para Febrero. Cuando me pidas "dame la semana X de Febrero", actualizaré este bloque con los datos reales del CRM.</p>
+    <div class="placeholder">
+      <div>📊 Estructura prevista:</div>
+      <ul>
+        <li>4-5 subpestañas semanales (W1, W2, ...)</li>
+        <li>Resumen mensual con totales y evolución</li>
+        <li>Comparativa Antonio vs Beatriz</li>
+        <li>Ranking de fuentes y conclusiones</li>
+      </ul>
+    </div>
+  </div>
+</div><div class="month-panel" id="mes-3">
+  <div class="empty-month">
+    <h3>Marzo 2026</h3>
+    <p>Aún no hay datos cargados para Marzo. Cuando me pidas "dame la semana X de Marzo", actualizaré este bloque con los datos reales del CRM.</p>
+    <div class="placeholder">
+      <div>📊 Estructura prevista:</div>
+      <ul>
+        <li>4-5 subpestañas semanales (W1, W2, ...)</li>
+        <li>Resumen mensual con totales y evolución</li>
+        <li>Comparativa Antonio vs Beatriz</li>
+        <li>Ranking de fuentes y conclusiones</li>
+      </ul>
+    </div>
+  </div>
+</div><div class="month-panel active" id="mes-4"><h2>Abril 2026 — Antonio vs Beatriz</h2>
+      <div class="subtabs">
+        <button class="subtab-btn active" data-target="abril-W14">Semana 14</button>
+        <button class="subtab-btn" data-target="abril-W15">Semana 15</button>
+        <button class="subtab-btn" data-target="abril-W16">Semana 16</button>
+        <button class="subtab-btn" data-target="abril-W17">Semana 17</button>
+        <button class="subtab-btn" data-target="abril-resumen">📅 Resumen mensual</button>
+      </div>
+    <div class="subpanels">
+  <div class="week-block" id="abril-W14">
+    <h3>W14 · <span class="rango">30/03/2026 - 05/04/2026</span></h3>
+    <div class="cards">
+      <div class="card a"><div class="who">Antonio</div><div class="big">570 €</div><div class="sub">Importe semanal</div></div>
+      <div class="card b"><div class="who">Beatriz</div><div class="big">3150 €</div><div class="sub">Importe semanal</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="panel">
+        <h4>Comparativa de KPIs</h4>
+        <div class="kpi-table">
+          <div class="kpi-row head"><div>Métrica</div><div>Antonio</div><div>Beatriz</div></div>
+          <div class="kpi-row"><div class="kpi-label">Solicitudes trabajadas</div><div class="kpi-a">35</div><div class="kpi-b">46</div></div>
+          <div class="kpi-row"><div class="kpi-label">Solicitudes recibidas</div><div class="kpi-a">28</div><div class="kpi-b">35</div></div>
+          <div class="kpi-row"><div class="kpi-label">Tareas trabajadas</div><div class="kpi-a">117</div><div class="kpi-b">78</div></div>
+          <div class="kpi-row"><div class="kpi-label">Llamadas emitidas</div><div class="kpi-a">55</div><div class="kpi-b">36</div></div>
+          <div class="kpi-row"><div class="kpi-label">Llamadas efectivas</div><div class="kpi-a">8</div><div class="kpi-b">14</div></div>
+          <div class="kpi-row"><div class="kpi-label">Tasa contacto</div><div class="kpi-a">14.5%</div><div class="kpi-b">38.9%</div></div>
+          <div class="kpi-row"><div class="kpi-label">Tiempo en llamadas</div><div class="kpi-a">0h 12m</div><div class="kpi-b">0h 58m</div></div>
+          <div class="kpi-row"><div class="kpi-label">WhatsApp interacciones</div><div class="kpi-a">32</div><div class="kpi-b">54</div></div>
+          <div class="kpi-row"><div class="kpi-label">WA recibidos / enviados</div><div class="kpi-a">49 / 121</div><div class="kpi-b">98 / 149</div></div>
+          <div class="kpi-row"><div class="kpi-label">Tareas pendientes</div><div class="kpi-a">19</div><div class="kpi-b">51</div></div>
+          <div class="kpi-row"><div class="kpi-label">Tareas caducadas</div><div class="kpi-a">4</div><div class="kpi-b">0</div></div>
+          <div class="kpi-row"><div class="kpi-label">% caducadas / trabajadas</div><div class="kpi-a">3.4%</div><div class="kpi-b">0.0%</div></div>
+          <div class="kpi-row"><div class="kpi-label">€ por solicitud trabajada</div><div class="kpi-a">16 €</div><div class="kpi-b">68 €</div></div>
+          <div class="kpi-row"><div class="kpi-label">Total actividades</div><div class="kpi-a">46</div><div class="kpi-b">58</div></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h4>Barras comparativas</h4>
+        <canvas id="bar-W14" height="240"></canvas>
+        <h4 style="margin-top:24px">Radar de rendimiento</h4>
+        <canvas id="radar-W14" height="240"></canvas>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:18px">
+      <h4>🚦 Alertas y mejoras</h4>
+      <ul class="alerts">
+        <li class="alert red">Antonio: tasa de contacto telefónico 14.5% (objetivo > 25%). Revisar horarios de llamada.</li>
+        
+        
+        <li class="alert amber">Beatriz: 51 tareas pendientes acumuladas. Riesgo de saturación.</li>
+        
+        
+        <li class="alert green">Beatriz lidera en facturación esta semana.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="week-block" id="abril-W15">
+    <h3>W15 · <span class="rango">06/04/2026 - 12/04/2026</span></h3>
+    <div class="cards">
+      <div class="card a"><div class="who">Antonio</div><div class="big">1596 €</div><div class="sub">Importe semanal</div></div>
+      <div class="card b"><div class="who">Beatriz</div><div class="big">9263 €</div><div class="sub">Importe semanal</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="panel">
+        <h4>Comparativa de KPIs</h4>
+        <div class="kpi-table">
+          <div class="kpi-row head"><div>Métrica</div><div>Antonio</div><div>Beatriz</div></div>
+          <div class="kpi-row"><div class="kpi-label">Solicitudes trabajadas</div><div class="kpi-a">42</div><div class="kpi-b">47</div></div>
+          <div class="kpi-row"><div class="kpi-label">Solicitudes recibidas</div><div class="kpi-a">33</div><div class="kpi-b">42</div></div>
+          <div class="kpi-row"><div class="kpi-label">Tareas trabajadas</div><div class="kpi-a">140</div><div class="kpi-b">77</div></div>
+          <div class="kpi-row"><div class="kpi-label">Llamadas emitidas</div><div class="kpi-a">61</div><div class="kpi-b">65</div></div>
+          <div class="kpi-row"><div class="kpi-label">Llamadas efectivas</div><div class="kpi-a">13</div><div class="kpi-b">29</div></div>
+          <div class="kpi-row"><div class="kpi-label">Tasa contacto</div><div class="kpi-a">21.3%</div><div class="kpi-b">44.6%</div></div>
+          <div class="kpi-row"><div class="kpi-label">Tiempo en llamadas</div><div class="kpi-a">0h 10m</div><div class="kpi-b">1h 48m</div></div>
+          <div class="kpi-row"><div class="kpi-label">WhatsApp interacciones</div><div class="kpi-a">42</div><div class="kpi-b">67</div></div>
+          <div class="kpi-row"><div class="kpi-label">WA recibidos / enviados</div><div class="kpi-a">126 / 260</div><div class="kpi-b">172 / 200</div></div>
+          <div class="kpi-row"><div class="kpi-label">Tareas pendientes</div><div class="kpi-a">19</div><div class="kpi-b">51</div></div>
+          <div class="kpi-row"><div class="kpi-label">Tareas caducadas</div><div class="kpi-a">4</div><div class="kpi-b">0</div></div>
+          <div class="kpi-row"><div class="kpi-label">% caducadas / trabajadas</div><div class="kpi-a">2.9%</div><div class="kpi-b">0.0%</div></div>
+          <div class="kpi-row"><div class="kpi-label">€ por solicitud trabajada</div><div class="kpi-a">38 €</div><div class="kpi-b">197 €</div></div>
+          <div class="kpi-row"><div class="kpi-label">Total actividades</div><div class="kpi-a">54</div><div class="kpi-b">59</div></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h4>Barras comparativas</h4>
+        <canvas id="bar-W15" height="240"></canvas>
+        <h4 style="margin-top:24px">Radar de rendimiento</h4>
+        <canvas id="radar-W15" height="240"></canvas>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:18px">
+      <h4>🚦 Alertas y mejoras</h4>
+      <ul class="alerts">
+        <li class="alert red">Antonio: tasa de contacto telefónico 21.3% (objetivo > 25%). Revisar horarios de llamada.</li>
+        
+        
+        <li class="alert amber">Beatriz: 51 tareas pendientes acumuladas. Riesgo de saturación.</li>
+        
+        
+        <li class="alert green">Beatriz lidera en facturación esta semana.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="week-block" id="abril-W16">
+    <h3>W16 · <span class="rango">13/04/2026 - 19/04/2026</span></h3>
+    <div class="cards">
+      <div class="card a"><div class="who">Antonio</div><div class="big">1080 €</div><div class="sub">Importe semanal</div></div>
+      <div class="card b"><div class="who">Beatriz</div><div class="big">0 €</div><div class="sub">Importe semanal</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="panel">
+        <h4>Comparativa de KPIs</h4>
+        <div class="kpi-table">
+          <div class="kpi-row head"><div>Métrica</div><div>Antonio</div><div>Beatriz</div></div>
+          <div class="kpi-row"><div class="kpi-label">Solicitudes trabajadas</div><div class="kpi-a">58</div><div class="kpi-b">62</div></div>
+          <div class="kpi-row"><div class="kpi-label">Solicitudes recibidas</div><div class="kpi-a">43</div><div class="kpi-b">52</div></div>
+          <div class="kpi-row"><div class="kpi-label">Tareas trabajadas</div><div class="kpi-a">206</div><div class="kpi-b">82</div></div>
+          <div class="kpi-row"><div class="kpi-label">Llamadas emitidas</div><div class="kpi-a">92</div><div class="kpi-b">62</div></div>
+          <div class="kpi-row"><div class="kpi-label">Llamadas efectivas</div><div class="kpi-a">15</div><div class="kpi-b">37</div></div>
+          <div class="kpi-row"><div class="kpi-label">Tasa contacto</div><div class="kpi-a">16.3%</div><div class="kpi-b">59.7%</div></div>
+          <div class="kpi-row"><div class="kpi-label">Tiempo en llamadas</div><div class="kpi-a">1h 13m</div><div class="kpi-b">1h 59m</div></div>
+          <div class="kpi-row"><div class="kpi-label">WhatsApp interacciones</div><div class="kpi-a">46</div><div class="kpi-b">75</div></div>
+          <div class="kpi-row"><div class="kpi-label">WA recibidos / enviados</div><div class="kpi-a">184 / 398</div><div class="kpi-b">231 / 267</div></div>
+          <div class="kpi-row"><div class="kpi-label">Tareas pendientes</div><div class="kpi-a">19</div><div class="kpi-b">51</div></div>
+          <div class="kpi-row"><div class="kpi-label">Tareas caducadas</div><div class="kpi-a">4</div><div class="kpi-b">0</div></div>
+          <div class="kpi-row"><div class="kpi-label">% caducadas / trabajadas</div><div class="kpi-a">1.9%</div><div class="kpi-b">0.0%</div></div>
+          <div class="kpi-row"><div class="kpi-label">€ por solicitud trabajada</div><div class="kpi-a">19 €</div><div class="kpi-b">0 €</div></div>
+          <div class="kpi-row"><div class="kpi-label">Total actividades</div><div class="kpi-a">73</div><div class="kpi-b">72</div></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h4>Barras comparativas</h4>
+        <canvas id="bar-W16" height="240"></canvas>
+        <h4 style="margin-top:24px">Radar de rendimiento</h4>
+        <canvas id="radar-W16" height="240"></canvas>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:18px">
+      <h4>🚦 Alertas y mejoras</h4>
+      <ul class="alerts">
+        <li class="alert red">Antonio: tasa de contacto telefónico 16.3% (objetivo > 25%). Revisar horarios de llamada.</li>
+        
+        
+        <li class="alert amber">Beatriz: 51 tareas pendientes acumuladas. Riesgo de saturación.</li>
+        
+        <li class="alert red">Beatriz: 0 € esta semana. Revisar pipeline.</li>
+        <li class="alert green">Antonio lidera en facturación esta semana.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="week-block" id="abril-W17">
+    <h3>W17 · <span class="rango">20/04/2026 - 26/04/2026</span></h3>
+    <div class="cards">
+      <div class="card a"><div class="who">Antonio</div><div class="big">570 €</div><div class="sub">Importe semanal</div></div>
+      <div class="card b"><div class="who">Beatriz</div><div class="big">6102,55 €</div><div class="sub">Importe semanal</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="panel">
+        <h4>Comparativa de KPIs</h4>
+        <div class="kpi-table">
+          <div class="kpi-row head"><div>Métrica</div><div>Antonio</div><div>Beatriz</div></div>
+          <div class="kpi-row"><div class="kpi-label">Solicitudes trabajadas</div><div class="kpi-a">59</div><div class="kpi-b">73</div></div>
+          <div class="kpi-row"><div class="kpi-label">Solicitudes recibidas</div><div class="kpi-a">33</div><div class="kpi-b">44</div></div>
+          <div class="kpi-row"><div class="kpi-label">Tareas trabajadas</div><div class="kpi-a">188</div><div class="kpi-b">108</div></div>
+          <div class="kpi-row"><div class="kpi-label">Llamadas emitidas</div><div class="kpi-a">100</div><div class="kpi-b">92</div></div>
+          <div class="kpi-row"><div class="kpi-label">Llamadas efectivas</div><div class="kpi-a">13</div><div class="kpi-b">46</div></div>
+          <div class="kpi-row"><div class="kpi-label">Tasa contacto</div><div class="kpi-a">13.0%</div><div class="kpi-b">50.0%</div></div>
+          <div class="kpi-row"><div class="kpi-label">Tiempo en llamadas</div><div class="kpi-a">0h 10m</div><div class="kpi-b">3h 11m</div></div>
+          <div class="kpi-row"><div class="kpi-label">WhatsApp interacciones</div><div class="kpi-a">57</div><div class="kpi-b">93</div></div>
+          <div class="kpi-row"><div class="kpi-label">WA recibidos / enviados</div><div class="kpi-a">95 / 231</div><div class="kpi-b">258 / 323</div></div>
+          <div class="kpi-row"><div class="kpi-label">Tareas pendientes</div><div class="kpi-a">20</div><div class="kpi-b">51</div></div>
+          <div class="kpi-row"><div class="kpi-label">Tareas caducadas</div><div class="kpi-a">3</div><div class="kpi-b">0</div></div>
+          <div class="kpi-row"><div class="kpi-label">% caducadas / trabajadas</div><div class="kpi-a">1.6%</div><div class="kpi-b">0.0%</div></div>
+          <div class="kpi-row"><div class="kpi-label">€ por solicitud trabajada</div><div class="kpi-a">10 €</div><div class="kpi-b">84 €</div></div>
+          <div class="kpi-row"><div class="kpi-label">Total actividades</div><div class="kpi-a">72</div><div class="kpi-b">96</div></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h4>Barras comparativas</h4>
+        <canvas id="bar-W17" height="240"></canvas>
+        <h4 style="margin-top:24px">Radar de rendimiento</h4>
+        <canvas id="radar-W17" height="240"></canvas>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:18px">
+      <h4>🚦 Alertas y mejoras</h4>
+      <ul class="alerts">
+        <li class="alert red">Antonio: tasa de contacto telefónico 13.0% (objetivo > 25%). Revisar horarios de llamada.</li>
+        
+        
+        <li class="alert amber">Beatriz: 51 tareas pendientes acumuladas. Riesgo de saturación.</li>
+        
+        
+        <li class="alert green">Beatriz lidera en facturación esta semana.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="week-block" id="abril-resumen">
+    <h3>📅 Resumen Abril 2026 · <span class="rango">01/04 - 30/04</span></h3>
+    <div class="cards">
+      <div class="card a"><div class="who">Antonio</div><div class="big">3816 €</div><div class="sub">Importe abril</div></div>
+      <div class="card b"><div class="who">Beatriz</div><div class="big">18.515,55 €</div><div class="sub">Importe abril</div></div>
+      <div class="card neutral"><div class="who">Total dpto.</div><div class="big">22.331,55 €</div><div class="sub">Facturación abril</div></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <h4>Comparativa mensual</h4>
+        <div class="kpi-table">
+          <div class="kpi-row head"><div>Métrica</div><div>Antonio</div><div>Beatriz</div></div>
+          <div class="kpi-row"><div class="kpi-label">Importe total (€)</div><div class="kpi-a">3816</div><div class="kpi-b">18.515,55</div></div>
+          <div class="kpi-row"><div class="kpi-label">€ por solicitud trabajada</div><div class="kpi-a">20 €</div><div class="kpi-b">81 €</div></div>
+          <div class="kpi-row"><div class="kpi-label">Solicitudes trabajadas</div><div class="kpi-a">194</div><div class="kpi-b">228</div></div>
+          <div class="kpi-row"><div class="kpi-label">Solicitudes recibidas</div><div class="kpi-a">137</div><div class="kpi-b">173</div></div>
+          <div class="kpi-row"><div class="kpi-label">Tareas trabajadas</div><div class="kpi-a">651</div><div class="kpi-b">345</div></div>
+          <div class="kpi-row"><div class="kpi-label">Llamadas emitidas</div><div class="kpi-a">308</div><div class="kpi-b">255</div></div>
+          <div class="kpi-row"><div class="kpi-label">Llamadas efectivas</div><div class="kpi-a">49</div><div class="kpi-b">126</div></div>
+          <div class="kpi-row"><div class="kpi-label">Tasa contacto</div><div class="kpi-a">15.9%</div><div class="kpi-b">49.4%</div></div>
+          <div class="kpi-row"><div class="kpi-label">WA recibidos / enviados</div><div class="kpi-a">454 / 1010</div><div class="kpi-b">759 / 939</div></div>
+          <div class="kpi-row"><div class="kpi-label">Total actividades</div><div class="kpi-a">245</div><div class="kpi-b">285</div></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h4>Evolución semanal del importe</h4>
+        <canvas id="line-abril" height="220"></canvas>
+        <h4 style="margin-top:24px">Radar mensual</h4>
+        <canvas id="radar-abril-mes" height="220"></canvas>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-top:18px">
+      <div class="panel">
+        <h4>🎯 Fuentes de venta - Abril 2026</h4>
+        <canvas id="donut-fuentes" height="220"></canvas>
+        <table class="src-table">
+          <thead><tr><th>Fuente</th><th>Ventas</th><th>%</th></tr></thead>
+          <tbody>
+            <tr><td>seo</td><td>8</td><td>44.4%</td></tr><tr><td>Google CPC</td><td>5</td><td>27.8%</td></tr><tr><td>exalumnos</td><td>2</td><td>11.1%</td></tr><tr><td>Insertado manual</td><td>1</td><td>5.6%</td></tr><tr><td>SIN UTM</td><td>1</td><td>5.6%</td></tr><tr><td>Telefono</td><td>1</td><td>5.6%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="panel">
+        <h4>💡 Conclusiones y recomendaciones</h4>
+        <ul class="conclusions">
+          <li><b>Beatriz factura 4,8x más que Antonio en abril</b> (18.515 € vs 3.816 €) pese a tener volumen similar de solicitudes (228 vs 194). Su €/solicitud es 81 € vs 20 € de Antonio.</li>
+          <li><b>Beatriz convierte mucho mejor por teléfono</b>: tasa de contacto 49,4% vs 15,9% de Antonio. Recomendación: shadowing de Antonio en llamadas de Beatriz para replicar su técnica.</li>
+          <li><b>Antonio dispara WhatsApp enviados</b> (1.010 mensajes vs 939 de Beatriz) pero sin reflejo en €. Revisar guion y argumentario por chat.</li>
+          <li><b>Beatriz acumula 51 tareas pendientes</b> sin caducar (gestión proactiva), pero el volumen indica saturación. Considerar redistribución de leads de baja calidad a Antonio.</li>
+          <li><b>SEO es la fuente nº1</b> de abril (8 ventas, 42% del total) seguida de Google CPC (5, 26%). Proteger inversión en SEO y testar incremento moderado en SEM.</li>
+          <li><b>Exalumnos genera 2 ventas</b>: fuente cero coste, escalable con campaña de referidos.</li>
+          <li><b>Mejora del dpto.</b>: estandarizar plantillas WhatsApp con CTA a llamada, fijar SLA de primer contacto < 1h, reunión semanal de calibración entre los dos comerciales.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div></div><div class="month-panel" id="mes-5">
+  <div class="empty-month">
+    <h3>Mayo 2026</h3>
+    <p>Aún no hay datos cargados para Mayo. Cuando me pidas "dame la semana X de Mayo", actualizaré este bloque con los datos reales del CRM.</p>
+    <div class="placeholder">
+      <div>📊 Estructura prevista:</div>
+      <ul>
+        <li>4-5 subpestañas semanales (W1, W2, ...)</li>
+        <li>Resumen mensual con totales y evolución</li>
+        <li>Comparativa Antonio vs Beatriz</li>
+        <li>Ranking de fuentes y conclusiones</li>
+      </ul>
+    </div>
+  </div>
+</div><div class="month-panel" id="mes-6">
+  <div class="empty-month">
+    <h3>Junio 2026</h3>
+    <p>Aún no hay datos cargados para Junio. Cuando me pidas "dame la semana X de Junio", actualizaré este bloque con los datos reales del CRM.</p>
+    <div class="placeholder">
+      <div>📊 Estructura prevista:</div>
+      <ul>
+        <li>4-5 subpestañas semanales (W1, W2, ...)</li>
+        <li>Resumen mensual con totales y evolución</li>
+        <li>Comparativa Antonio vs Beatriz</li>
+        <li>Ranking de fuentes y conclusiones</li>
+      </ul>
+    </div>
+  </div>
+</div><div class="month-panel" id="mes-7">
+  <div class="empty-month">
+    <h3>Julio 2026</h3>
+    <p>Aún no hay datos cargados para Julio. Cuando me pidas "dame la semana X de Julio", actualizaré este bloque con los datos reales del CRM.</p>
+    <div class="placeholder">
+      <div>📊 Estructura prevista:</div>
+      <ul>
+        <li>4-5 subpestañas semanales (W1, W2, ...)</li>
+        <li>Resumen mensual con totales y evolución</li>
+        <li>Comparativa Antonio vs Beatriz</li>
+        <li>Ranking de fuentes y conclusiones</li>
+      </ul>
+    </div>
+  </div>
+</div><div class="month-panel" id="mes-8">
+  <div class="empty-month">
+    <h3>Agosto 2026</h3>
+    <p>Aún no hay datos cargados para Agosto. Cuando me pidas "dame la semana X de Agosto", actualizaré este bloque con los datos reales del CRM.</p>
+    <div class="placeholder">
+      <div>📊 Estructura prevista:</div>
+      <ul>
+        <li>4-5 subpestañas semanales (W1, W2, ...)</li>
+        <li>Resumen mensual con totales y evolución</li>
+        <li>Comparativa Antonio vs Beatriz</li>
+        <li>Ranking de fuentes y conclusiones</li>
+      </ul>
+    </div>
+  </div>
+</div><div class="month-panel" id="mes-9">
+  <div class="empty-month">
+    <h3>Septiembre 2026</h3>
+    <p>Aún no hay datos cargados para Septiembre. Cuando me pidas "dame la semana X de Septiembre", actualizaré este bloque con los datos reales del CRM.</p>
+    <div class="placeholder">
+      <div>📊 Estructura prevista:</div>
+      <ul>
+        <li>4-5 subpestañas semanales (W1, W2, ...)</li>
+        <li>Resumen mensual con totales y evolución</li>
+        <li>Comparativa Antonio vs Beatriz</li>
+        <li>Ranking de fuentes y conclusiones</li>
+      </ul>
+    </div>
+  </div>
+</div><div class="month-panel" id="mes-10">
+  <div class="empty-month">
+    <h3>Octubre 2026</h3>
+    <p>Aún no hay datos cargados para Octubre. Cuando me pidas "dame la semana X de Octubre", actualizaré este bloque con los datos reales del CRM.</p>
+    <div class="placeholder">
+      <div>📊 Estructura prevista:</div>
+      <ul>
+        <li>4-5 subpestañas semanales (W1, W2, ...)</li>
+        <li>Resumen mensual con totales y evolución</li>
+        <li>Comparativa Antonio vs Beatriz</li>
+        <li>Ranking de fuentes y conclusiones</li>
+      </ul>
+    </div>
+  </div>
+</div><div class="month-panel" id="mes-11">
+  <div class="empty-month">
+    <h3>Noviembre 2026</h3>
+    <p>Aún no hay datos cargados para Noviembre. Cuando me pidas "dame la semana X de Noviembre", actualizaré este bloque con los datos reales del CRM.</p>
+    <div class="placeholder">
+      <div>📊 Estructura prevista:</div>
+      <ul>
+        <li>4-5 subpestañas semanales (W1, W2, ...)</li>
+        <li>Resumen mensual con totales y evolución</li>
+        <li>Comparativa Antonio vs Beatriz</li>
+        <li>Ranking de fuentes y conclusiones</li>
+      </ul>
+    </div>
+  </div>
+</div><div class="month-panel" id="mes-12">
+  <div class="empty-month">
+    <h3>Diciembre 2026</h3>
+    <p>Aún no hay datos cargados para Diciembre. Cuando me pidas "dame la semana X de Diciembre", actualizaré este bloque con los datos reales del CRM.</p>
+    <div class="placeholder">
+      <div>📊 Estructura prevista:</div>
+      <ul>
+        <li>4-5 subpestañas semanales (W1, W2, ...)</li>
+        <li>Resumen mensual con totales y evolución</li>
+        <li>Comparativa Antonio vs Beatriz</li>
+        <li>Ranking de fuentes y conclusiones</li>
+      </ul>
+    </div>
+  </div>
+</div></main>
+<footer>Dashboard generado automáticamente · Última actualización: Abril 2026 (W14-W17)</footer>
+<script>
+  // Tabs principales
+  document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.querySelectorAll('.month-panel').forEach(p=>p.classList.remove('active'));
+    document.getElementById(b.dataset.target).classList.add('active');
+  }));
+  // Subtabs
+  document.querySelectorAll('.subtab-btn').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('.subtab-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.querySelectorAll('.week-block').forEach(w=>w.classList.remove('active'));
+    document.getElementById(b.dataset.target).classList.add('active');
+    setTimeout(initCharts, 60);
+  }));
+  // Activar primera semana
+  document.querySelectorAll('#abril-W14').forEach(w=>w.classList.add('active'));
+
+  const A_COLOR = '#3b82f6', B_COLOR = '#ec4899';
+  const data = {"semanas":{"W14":{"rango":"30/03/2026 - 05/04/2026","antonio":{"importe":570,"sol_trab":35,"sol_rec":28,"tareas":117,"llam_emit":55,"llam_efect":8,"tiempo_llam":"0h 12m","llam_perd":0,"wa_int":32,"wa_rec":49,"wa_env":121,"t_pend":19,"t_cad":4,"act":46},"beatriz":{"importe":3150,"sol_trab":46,"sol_rec":35,"tareas":78,"llam_emit":36,"llam_efect":14,"tiempo_llam":"0h 58m","llam_perd":2,"wa_int":54,"wa_rec":98,"wa_env":149,"t_pend":51,"t_cad":0,"act":58}},"W15":{"rango":"06/04/2026 - 12/04/2026","antonio":{"importe":1596,"sol_trab":42,"sol_rec":33,"tareas":140,"llam_emit":61,"llam_efect":13,"tiempo_llam":"0h 10m","llam_perd":1,"wa_int":42,"wa_rec":126,"wa_env":260,"t_pend":19,"t_cad":4,"act":54},"beatriz":{"importe":9263,"sol_trab":47,"sol_rec":42,"tareas":77,"llam_emit":65,"llam_efect":29,"tiempo_llam":"1h 48m","llam_perd":2,"wa_int":67,"wa_rec":172,"wa_env":200,"t_pend":51,"t_cad":0,"act":59}},"W16":{"rango":"13/04/2026 - 19/04/2026","antonio":{"importe":1080,"sol_trab":58,"sol_rec":43,"tareas":206,"llam_emit":92,"llam_efect":15,"tiempo_llam":"1h 13m","llam_perd":2,"wa_int":46,"wa_rec":184,"wa_env":398,"t_pend":19,"t_cad":4,"act":73},"beatriz":{"importe":0,"sol_trab":62,"sol_rec":52,"tareas":82,"llam_emit":62,"llam_efect":37,"tiempo_llam":"1h 59m","llam_perd":4,"wa_int":75,"wa_rec":231,"wa_env":267,"t_pend":51,"t_cad":0,"act":72}},"W17":{"rango":"20/04/2026 - 26/04/2026","antonio":{"importe":570,"sol_trab":59,"sol_rec":33,"tareas":188,"llam_emit":100,"llam_efect":13,"tiempo_llam":"0h 10m","llam_perd":2,"wa_int":57,"wa_rec":95,"wa_env":231,"t_pend":20,"t_cad":3,"act":72},"beatriz":{"importe":6102.55,"sol_trab":73,"sol_rec":44,"tareas":108,"llam_emit":92,"llam_efect":46,"tiempo_llam":"3h 11m","llam_perd":1,"wa_int":93,"wa_rec":258,"wa_env":323,"t_pend":51,"t_cad":0,"act":96}}},"fuentes":{"seo":8,"Google CPC":5,"exalumnos":2,"Insertado manual":1,"SIN UTM":1,"Telefono":1},"totales":{"antonio":{"importe":3816,"sol_trab":194,"sol_rec":137,"tareas":651,"llam_emit":308,"llam_efect":49,"llam_perd":5,"wa_int":177,"wa_rec":454,"wa_env":1010,"act":245,"t_pend":20,"t_cad":3},"beatriz":{"importe":18515.55,"sol_trab":228,"sol_rec":173,"tareas":345,"llam_emit":255,"llam_efect":126,"llam_perd":9,"wa_int":289,"wa_rec":759,"wa_env":939,"act":285,"t_pend":51,"t_cad":0}}};
+
+  function chart(id, cfg){
+    const ctx = document.getElementById(id);
+    if(!ctx || ctx.dataset.done) return;
+    ctx.dataset.done = '1';
+    new Chart(ctx, cfg);
+  }
+
+  function radarCfg(A,B){
+    return {type:'radar',data:{labels:['Importe','Solicitudes','Llamadas ef.','WhatsApp','Tareas','Tasa cont.'],datasets:[
+      {label:'Antonio',data:[A.importe/100,A.sol_trab,A.llam_efect,A.wa_int,A.tareas/2,(A.llam_emit?A.llam_efect/A.llam_emit*100:0)],backgroundColor:'rgba(59,130,246,.2)',borderColor:A_COLOR,borderWidth:2},
+      {label:'Beatriz',data:[B.importe/100,B.sol_trab,B.llam_efect,B.wa_int,B.tareas/2,(B.llam_emit?B.llam_efect/B.llam_emit*100:0)],backgroundColor:'rgba(236,72,153,.2)',borderColor:B_COLOR,borderWidth:2}
+    ]},options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{r:{beginAtZero:true}}}};
+  }
+  function barCfg(A,B){
+    return {type:'bar',data:{labels:['Importe(€)','Sol.trab','Tareas','Llam.ef.','WA'],datasets:[
+      {label:'Antonio',data:[A.importe,A.sol_trab,A.tareas,A.llam_efect,A.wa_int],backgroundColor:A_COLOR},
+      {label:'Beatriz',data:[B.importe,B.sol_trab,B.tareas,B.llam_efect,B.wa_int],backgroundColor:B_COLOR}
+    ]},options:{responsive:true,plugins:{legend:{position:'bottom'}}}};
+  }
+  function initCharts(){
+    Object.entries(data.semanas).forEach(([k,info])=>{
+      chart('bar-'+k, barCfg(info.antonio, info.beatriz));
+      chart('radar-'+k, radarCfg(info.antonio, info.beatriz));
+    });
+    const lineData = ['W14','W15','W16','W17'].map(w=>data.semanas[w]);
+    chart('line-abril',{type:'line',data:{labels:['W14','W15','W16','W17'],datasets:[
+      {label:'Antonio',data:lineData.map(s=>s.antonio.importe),borderColor:A_COLOR,backgroundColor:'rgba(59,130,246,.1)',tension:.3,fill:true},
+      {label:'Beatriz',data:lineData.map(s=>s.beatriz.importe),borderColor:B_COLOR,backgroundColor:'rgba(236,72,153,.1)',tension:.3,fill:true}
+    ]},options:{responsive:true,plugins:{legend:{position:'bottom'}}}});
+    chart('radar-abril-mes', radarCfg(data.totales.antonio, data.totales.beatriz));
+    const f = Object.entries(data.fuentes).sort((a,b)=>b[1]-a[1]);
+    chart('donut-fuentes',{type:'doughnut',data:{labels:f.map(x=>x[0]),datasets:[{data:f.map(x=>x[1]),backgroundColor:['#0f766e','#3b82f6','#ec4899','#f59e0b','#8b5cf6','#10b981','#ef4444']}]},options:{responsive:true,plugins:{legend:{position:'right'}}}});
+  }
+  setTimeout(initCharts, 200);
+</script>
+</body>
+</html>
